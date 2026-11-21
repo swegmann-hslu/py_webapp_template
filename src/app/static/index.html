@@ -1,12 +1,600 @@
-<!DOCTYPE html>
-<html>
-
+<!doctype html>
+<html lang="de">
 <head>
-    <meta charset="utf8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PaceMaker Lauftraining</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/vue@3.5.42/dist/vue.global.prod.js"></script>
+<style>
+/* Layout: schmale App-Spalte (max. 1040px), Kopf mit Tabs, pro Tab eine Ansicht; Zahlen wie auf einer Startnummer in Barlow Condensed */
+:root {
+  --bg: #f3f5f4;
+  --surface: #ffffff;
+  --ink: #15211f;
+  --muted: #5b6a67;
+  --line: #d9e0de;
+  --accent: #0b6e69;        /* Bahn-Petrol */
+  --accent-soft: #dcefed;
+  --signal: #e8a31a;        /* Startnummer-Gelb, sparsam */
+  --ok: #2f7d3a;
+  --warn: #b25e09;
+  --danger: #b3261e;
+  --font-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --font-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --radius: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1716; --surface: #172220; --ink: #e6eeec; --muted: #9aaba7; --line: #2b3a37;
+    --accent: #4fc1b9; --accent-soft: #1d3936; --signal: #f0b43c; --ok: #6cc178; --warn: #e79a4a; --danger: #ef7a72;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1716; --surface: #172220; --ink: #e6eeec; --muted: #9aaba7; --line: #2b3a37;
+  --accent: #4fc1b9; --accent-soft: #1d3936; --signal: #f0b43c; --ok: #6cc178; --warn: #e79a4a; --danger: #ef7a72;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden], [v-cloak] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.5 var(--font-body); }
+.wrap { max-width: 1040px; margin: 0 auto; padding-inline: 16px; padding-block: 0 48px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.1; text-wrap: balance; margin: 0; }
+h2 { font-size: 30px; }
+h3 { font-size: 20px; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.num { font-variant-numeric: tabular-nums; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Kopf */
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.top-inner { max-width: 1040px; margin: 0 auto; padding-inline: 16px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; padding-block: 12px 0; }
+.brand { display: flex; align-items: baseline; gap: 10px; padding-bottom: 12px; }
+.brand b { font-family: var(--font-display); font-size: 26px; letter-spacing: .02em; }
+.tabs { display: flex; gap: 4px; overflow-x: auto; flex: 1 1 auto; min-width: 0; }
+.tab { border: 0; background: none; padding: 10px 14px 12px; cursor: pointer; color: var(--muted); font-weight: 600; border-bottom: 3px solid transparent; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab:hover { color: var(--ink); }
+
+.user { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; margin-left: auto; font-size: 14px; }
+.user .btn { padding: 5px 12px; }
+
+/* Login */
+.auth { max-width: 420px; width: 100%; margin: 24px auto 0; display: grid; gap: 16px; }
+.auth form { display: grid; gap: 14px; }
+.auth .switch { font-size: 14px; }
+.linkbtn { border: 0; background: none; padding: 0; color: var(--accent); font-weight: 600; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.err { color: var(--danger); font-size: 14px; font-weight: 600; }
+.demo { font-size: 14px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: var(--radius); display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+
+.note { margin-block: 16px 0; padding: 10px 14px; border-radius: var(--radius); background: var(--accent-soft); font-size: 14px; }
+
+.view { display: grid; gap: 20px; padding-top: 24px; }
+.head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; }
+.head p { margin-top: 4px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; min-width: 0; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn:disabled { opacity: .5; cursor: default; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+/* Logbuch */
+.drop { border: 2px dashed var(--line); border-radius: var(--radius); padding: 18px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+.result { font-size: 14px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; min-width: 680px; }
+th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); font-weight: 600; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th button { all: unset; cursor: pointer; }
+th button:focus-visible { outline: 2px solid var(--accent); }
+th .arrow { color: var(--accent); }
+td { padding: 12px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td.r, th.r { text-align: right; }
+td small { display: block; color: var(--muted); font-size: 12px; }
+.badge { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); margin-left: 6px; vertical-align: 1px; }
+.del { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px; }
+.del:hover { color: var(--danger); }
+details summary { cursor: pointer; font-weight: 600; }
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; align-items: end; }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+input[type=text], input[type=number], input[type=date], input[type=datetime-local], input[type=email], input[type=password], select, textarea {
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; background: var(--surface); color: var(--ink); width: 100%;
+}
+textarea { resize: vertical; min-height: 70px; }
+
+/* Rückfragen */
+.q { display: grid; gap: 10px; padding-block: 16px; border-top: 1px solid var(--line); }
+.q:first-of-type { border-top: 0; padding-top: 0; }
+.q legend { font-family: var(--font-display); font-size: 20px; font-weight: 600; padding: 0; }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip input { position: absolute; opacity: 0; pointer-events: none; }
+.chip span { display: inline-block; padding: 7px 14px; border-radius: 99px; border: 1px solid var(--line); cursor: pointer; color: var(--ink); font-size: 14px; }
+.chip input:checked + span { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+.chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hint { font-size: 13px; color: var(--muted); }
+.saved { color: var(--ok); font-weight: 600; font-size: 14px; }
+
+/* KI-Tipps */
+.ask { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.ask button { text-align: left; padding: 14px 16px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-weight: 600; line-height: 1.35; }
+.ask button:hover, .ask button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.ask-go { margin: 14px 0 0; }
+/* Reiner Text vom Sprachmodell: pre-line erhält Absätze und Zeilenumbrüche (FA-E3) */
+.answer { white-space: pre-line; max-width: 68ch; line-height: 1.6; }
+.answer-tag { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--warn); font-weight: 600; }
+pre.ctx { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12.5px; line-height: 1.45; margin: 10px 0 0; }
+.loading { color: var(--muted); }
+
+@media (max-width: 560px) {
+  h2 { font-size: 26px; }
+  .top-inner { gap: 0 12px; }
+  .user { order: 1; padding-bottom: 12px; }
+  .user .hallo { display: none; }
+  .tabs { order: 2; flex-basis: 100%; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .view { animation: fade .18s ease-out; }
+  @keyframes fade { from { opacity: .6; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+}
+</style>
 </head>
-
 <body>
-    <h1>Hello from the frontend</h1>
-</body>
+<div id="app" v-cloak>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><b>PaceMaker</b></div>
+    <nav class="tabs" role="tablist" aria-label="Ansichten" id="tabs" v-if="user">
+      <button v-for="t in TABS" :key="t.id" class="tab" role="tab" :id="'tab-' + t.id"
+              :aria-selected="String(view === t.id)" @click="zeige(t.id)">{{ t.label }}</button>
+    </nav>
+    <div class="user" id="user-box" v-if="user">
+      <span><span class="hallo">Hallo, </span><b id="user-name">{{ user.name }}</b></span>
+      <button class="btn" id="logout-btn" @click="abmelden">Abmelden</button>
+    </div>
+  </div>
+</header>
 
+<main class="wrap">
+
+  <!-- LOGIN / REGISTRIERUNG -->
+  <section class="view auth" id="view-auth" v-if="bereit && !user">
+    <div class="card">
+      <h2>Anmelden</h2>
+      <p class="muted" style="margin-block:4px 16px">Melde dich an, um dein Logbuch und deine KI-Tipps zu sehen.</p>
+      <form @submit.prevent="authSenden" novalidate>
+        <label>E-Mail<input type="email" id="a-email" v-model="auth.email" autocomplete="email" required></label>
+        <label>Passwort<input type="password" id="a-pw" v-model="auth.passwort"  autocomplete="current-password" required></label>
+        <p class="err" id="auth-err" role="alert" v-if="auth.fehler">{{ auth.fehler }}</p>
+        <button class="btn primary" type="submit" id="auth-submit" :disabled="auth.laeuft">Anmelden</button>
+      </form>
+    </div>
+    <div class="demo">
+      <span>Demo-Konten (Passwort jeweils <b>laufen123</b>):<br><b>demo@pacemaker.ch</b><br><b>demo2@pacemaker.ch</b></span>
+      <button class="btn" id="demo-btn" type="button" @click="demoEintragen">Eintragen</button>
+    </div>
+  </section>
+
+  <template v-if="user">
+  <!-- LOGBUCH -->
+  <section class="view" id="view-logbuch" role="tabpanel" aria-labelledby="tab-logbuch" v-show="view === 'logbuch'">
+    <div class="head">
+      <div>
+        <h2>Logbuch</h2>
+        <p class="muted num" id="log-summary">{{ logSummary }}</p>
+      </div>
+    </div>
+
+    <div class="drop" :class="{ over: dragOver }" @dragover.prevent="dragOver = true" @dragleave="dragOver = false" @drop.prevent="onDrop">
+      <div>
+        <h3>Garmin-Export importieren</h3>
+        <p class="hint">Activities.csv aus Garmin Connect mit deutscher Spracheinstellung und metrischen Einheiten. Übernommen werden nur Läufe; Duplikate werden übersprungen.</p>
+      </div>
+      <div class="row">
+        <input type="file" id="csv-input" ref="csvInput" accept=".csv,text/csv" hidden @change="onFile">
+        <button class="btn primary" @click="csvInput.click()">CSV auswählen</button>
+      </div>
+      <p class="result" id="import-result" v-if="importMeldung.text" :style="{ color: importMeldung.ok ? 'var(--ok)' : 'var(--danger)' }">{{ importMeldung.text }}</p>
+    </div>
+
+    <div class="card" style="padding: 0;">
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th v-for="s in SPALTEN" :key="s.key" :class="s.cls" :aria-sort="sortKey === s.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'">
+              <button @click="sortiere(s.key)">{{ s.label }} <span class="arrow">{{ sortKey === s.key ? (sortDir === 'asc' ? '↑' : '↓') : '' }}</span></button>
+            </th>
+            <th></th>
+          </tr></thead>
+          <tbody id="log-body">
+            <tr v-for="t in trainings" :key="t.id">
+              <td>{{ fmtDatum(t.start_time) }}<small>{{ fmtUhr(t.start_time) }}</small></td>
+              <td>{{ t.title }}<span class="badge" v-if="t.activity_type === 'Laufbandtraining'">Laufband</span><span class="badge" v-if="t.activity_type === 'Trailrunning'">Trail</span></td>
+              <td class="r">{{ fmtKm(t.distance_km) }}</td>
+              <td class="r">{{ fmtZeit(t.moving_time_s) }}</td>
+              <td class="r">{{ fmtPace(t.moving_time_s / t.distance_km) }}</td>
+              <td class="r">{{ t.avg_hr ?? '–' }}</td>
+              <td class="r">{{ t.total_ascent_m != null ? Math.round(t.total_ascent_m) + ' m' : '–' }}</td>
+              <td class="r"><button class="del" :aria-label="t.title + ' löschen'" title="Löschen" @click="loesche(t.id)">✕</button></td>
+            </tr>
+            <tr v-if="!trainings.length"><td colspan="8" class="muted">Noch keine Läufe. Importiere deinen Garmin-Export oder erfasse einen Lauf manuell.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <details class="card">
+      <summary>Lauf manuell erfassen</summary>
+      <form class="form-grid" @submit.prevent="laufSpeichern">
+        <label>Datum &amp; Uhrzeit<input type="datetime-local" v-model="manuell.start" required></label>
+        <label>Titel<input type="text" v-model="manuell.titel" placeholder="z. B. Abendlauf" required maxlength="60"></label>
+        <label>Distanz (km)<input type="number" v-model.number="manuell.km" step="0.01" min="0.5" max="100" required></label>
+        <label>Zeit (h:mm:ss oder mm:ss)<input type="text" v-model="manuell.zeit" placeholder="45:30" required pattern="^(\d{1,2}:)?\d{1,2}:\d{2}$"></label>
+        <label>Ø Puls (optional)<input type="number" v-model.number="manuell.hf" min="60" max="220"></label>
+        <button class="btn primary" type="submit">Lauf speichern</button>
+      </form>
+      <p class="err" style="margin-top:10px" role="alert" v-if="manuell.fehler">{{ manuell.fehler }}</p>
+      <p class="hint" style="margin-top:10px" v-if="manuell.gespeichert">Lauf gespeichert.</p>
+    </details>
+  </section>
+
+  <!-- RÜCKFRAGEN -->
+  <section class="view" id="view-profil" role="tabpanel" aria-labelledby="tab-profil" v-show="view === 'profil'">
+    <div class="head">
+      <div>
+        <h2>Trainingsrückfragen</h2>
+        <p class="muted">Kurze Fragen zu deinem Training. Die KI-Tipps bekommen deine Antworten als Kontext.</p>
+      </div>
+    </div>
+    <form class="card" id="profil-form" v-if="rueckfragen.length" @submit.prevent="profilSpeichern" novalidate>
+      <!-- Fragen, Antworttypen und Optionen kommen aus GET /api/goals/questions (FA-Z5) -->
+      <fieldset class="q" v-for="q in rueckfragen" :key="q.key">
+        <legend>{{ q.text }}</legend>
+        <div class="chips" v-if="q.answer_type === 'choice'">
+          <label class="chip" v-for="o in q.options" :key="o.key"><input type="radio" :name="q.key" :value="o.key" v-model="antworten[q.key]"><span>{{ o.label }}</span></label>
+        </div>
+        <div class="row" v-else-if="q.answer_type === 'number'">
+          <label style="max-width:160px">Zahl<input type="number" v-model.number="antworten[q.key]" :min="q.min_value" :max="q.max_value" step="1"></label>
+          <p class="hint" v-if="q.key === 'weekly_km'">Vorschlag aus deinen Läufen: Ø {{ kmVorschlag }} km in den letzten 4 Wochen.</p>
+        </div>
+        <label v-else>{{ q.required ? 'Antwort' : 'Optional' }}<template v-if="q.max_length">, max. {{ q.max_length }} Zeichen</template><textarea v-model="antworten[q.key]" :maxlength="q.max_length"></textarea></label>
+
+        <!-- FA-Z2: Wettkampfangaben nur bei Ziel "Wettkampf" -->
+        <div class="form-grid" v-if="q.key === 'goal' && antworten.goal === 'competition'">
+          <label>Wettkampf<input type="text" v-model="wettkampf.name" maxlength="60" required></label>
+          <label>Datum<input type="date" v-model="wettkampf.race_date" required></label>
+          <label>Distanz<select v-model.number="wettkampf.distance_km">
+            <option :value="5">5 km</option><option :value="10">10 km</option>
+            <option :value="21.0975">Halbmarathon</option><option :value="42.195">Marathon</option>
+          </select></label>
+          <label>Zielzeit (h:mm:ss)<input type="text" v-model="wettkampf.target_time" placeholder="1:45:00" required></label>
+        </div>
+      </fieldset>
+      <p class="err" role="alert" v-if="profilFehler">{{ profilFehler }}</p>
+      <div class="row" style="margin-top:8px">
+        <button class="btn primary" type="submit">Antworten speichern</button>
+        <span class="saved" id="profil-saved" v-if="profilGespeichert">Gespeichert.</span>
+      </div>
+    </form>
+  </section>
+
+  <!-- KI-TIPPS -->
+  <section class="view" id="view-tipps" role="tabpanel" aria-labelledby="tab-tipps" v-show="view === 'tipps'">
+    <div class="head">
+      <div>
+        <h2>Trainingstipps durch KI</h2>
+        <p class="muted">Wähle eine Frage und lass dir eine Antwort erzeugen. Die Frage geht zusammen mit deinen Rückfragen und einer Zusammenfassung deiner Läufe an das Sprachmodell.</p>
+      </div>
+    </div>
+    <!-- FA-E1: Antippen wählt nur aus; erst der Knopf fragt das Sprachmodell -->
+    <div class="ask">
+      <button v-for="f in fragen" :key="f.id" :data-frage="f.id" :aria-pressed="String(tipp.auswahl === f.id)" :disabled="tipp.laedt" @click="tipp.auswahl = f.id">{{ f.text }}</button>
+    </div>
+    <p class="ask-go">
+      <button class="btn primary" id="ask-btn" :disabled="!tipp.auswahl || tipp.laedt" @click="antwortErzeugen">{{ tipp.empfehlung ? 'Neue Antwort erzeugen' : 'Antwort erzeugen' }}</button>
+    </p>
+    <p class="loading" role="status" v-if="tipp.laedt">Der Coach denkt nach …</p>
+    <p class="err" role="alert" v-if="tipp.fehler">{{ tipp.fehler }}</p>
+    <!-- FA-E6: die letzte Empfehlung, auch nach dem Neuladen -->
+    <div class="card" v-if="tipp.empfehlung">
+      <p class="answer-tag">Letzte Empfehlung · {{ fmtDatum(tipp.empfehlung.created_at) }}, {{ fmtUhr(tipp.empfehlung.created_at) }}</p>
+      <h3 style="margin-block:6px 10px">{{ tipp.empfehlung.question }}</h3>
+      <div class="answer" id="answer">{{ tipp.empfehlung.answer }}</div>
+      <!-- FA-E4: genau der Text, der an das Sprachmodell ging -->
+      <details style="margin-top:16px">
+        <summary>Was an das Sprachmodell gesendet wurde</summary>
+        <pre class="ctx">{{ tipp.empfehlung.prompt }}</pre>
+      </details>
+    </div>
+    <p class="muted" v-else-if="!tipp.laedt">Noch keine Empfehlung. Wähle oben eine Frage und klicke auf «Antwort erzeugen».</p>
+  </section>
+  </template>
+</main>
+</div>
+
+<script>
+/* ================================================================
+   API: Jede Funktion entspricht einem Endpunkt aus docs/architektur.md.
+   ================================================================ */
+class ApiFehler extends Error {
+  constructor(status, message) { super(message); this.status = status; }
+}
+/* Aufruf des Flask-Backends. Fehler kommen als JSON {"error": "…"} zurück
+   und werden zu ApiFehler, damit die Oberfläche die Meldung anzeigen kann (NFA-5). */
+async function apiFetch(url, options = {}) {
+  let r;
+  try {
+    r = await fetch(url, {
+      ...options,
+      headers: typeof options.body === 'string' ? { 'Content-Type': 'application/json' } : undefined,
+    });
+  } catch (e) {
+    throw new ApiFehler(0, 'Der Server ist nicht erreichbar. Bitte versuche es später nochmals.');
+  }
+  if (r.status === 204) return null;
+  const daten = await r.json().catch(() => ({}));
+  if (!r.ok) throw new ApiFehler(r.status, daten.error || 'Unerwarteter Fehler. Bitte versuche es nochmals.');
+  return daten;
+}
+
+const api = {
+  // POST /api/auth/login {email, password} → setzt Session-Cookie, 401 bei falschen Angaben
+  async login(email, passwort) {
+    const u = await apiFetch('/api/auth/login', {
+      method: 'POST', body: JSON.stringify({ email, password: passwort }),
+    });
+    return u;
+  },
+  // POST /api/auth/logout → beendet die Sitzung serverseitig
+  async logout() {
+    await apiFetch('/api/auth/logout', { method: 'POST' });
+  },
+  // GET /api/auth/me → 401 ohne Sitzung
+  async me() {
+    return apiFetch('/api/auth/me');
+  },
+  // GET /api/trainings?sort=&direction= (FA-L1, FA-L2)
+  async getTrainings(sort, direction) {
+    return apiFetch(`/api/trainings?sort=${sort}&direction=${direction}`);
+  },
+  // POST /api/trainings/import, Datei als multipart/form-data (FA-I1)
+  async importCsv(file) {
+    const body = new FormData();
+    body.append('file', file);
+    return apiFetch('/api/trainings/import', { method: 'POST', body });
+  },
+  // POST /api/trainings (FA-L4)
+  async addTraining(t) {
+    return apiFetch('/api/trainings', { method: 'POST', body: JSON.stringify(t) });
+  },
+  // DELETE /api/trainings/{id} (FA-L5)
+  async deleteTraining(id) {
+    return apiFetch(`/api/trainings/${id}`, { method: 'DELETE' });
+  },
+  // GET /api/goals/questions: Fragen, Antworttypen und Optionen (FA-Z5)
+  async getRueckfragen() {
+    return apiFetch('/api/goals/questions');
+  },
+  // GET /api/goals: Antworten, Wettkampf und km-Vorschlag (FA-Z2 bis FA-Z4)
+  async getZiele() {
+    return apiFetch('/api/goals');
+  },
+  // PUT /api/goals (FA-Z4)
+  async putZiele(answers, competition) {
+    return apiFetch('/api/goals', { method: 'PUT', body: JSON.stringify({ answers, competition }) });
+  },
+  // GET /api/recommendation/questions (FA-E1)
+  async getFragen() {
+    return apiFetch('/api/recommendation/questions');
+  },
+  // GET /api/recommendation: letzte Empfehlung oder null (FA-E6)
+  async getEmpfehlung() {
+    return (await apiFetch('/api/recommendation')).recommendation;
+  },
+  // POST /api/recommendation {question_id} (FA-E2 bis FA-E7)
+  async askCoach(questionId) {
+    return apiFetch('/api/recommendation', { method: 'POST', body: JSON.stringify({ question_id: questionId }) });
+  },
+};
+
+/* ---------- Formatierung (im Frontend) ---------- */
+const fmtKm = (km) => km.toLocaleString('de-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' km';
+function fmtZeit(s) {
+  s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sek = s % 60;
+  return h ? `${h}:${String(m).padStart(2, '0')}:${String(sek).padStart(2, '0')}` : `${m}:${String(sek).padStart(2, '0')}`;
+}
+const fmtPace = (s) => fmtZeit(s) + ' /km';
+const fmtDatum = (iso) => new Date(iso.length <= 10 ? iso + 'T00:00:00' : iso).toLocaleDateString('de-CH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+const fmtUhr = (iso) => new Date(iso).toLocaleTimeString('de-CH', { hour: '2-digit', minute: '2-digit' }) + ' Uhr';
+
+/* ================================================================
+   UI mit Vue 3 (Composition API, globaler Build über CDN, kein Build-Schritt).
+   Die Komponente ruft nur api.* auf und hält das Ergebnis in refs;
+   im Projekt sind das fetch-Aufrufe an das Flask-Backend.
+   ================================================================ */
+const { createApp, ref, reactive, computed, onMounted } = Vue;
+
+createApp({
+  setup() {
+    const TABS = [
+      { id: 'logbuch', label: 'Logbuch' },
+      { id: 'profil', label: 'Rückfragen' },
+      { id: 'tipps', label: 'KI-Tipps' },
+    ];
+    const SPALTEN = [
+      { key: 'start_time', label: 'Datum & Uhrzeit' }, { key: 'title', label: 'Lauf' },
+      { key: 'distance_km', label: 'Distanz', cls: 'r' }, { key: 'moving_time_s', label: 'Zeit', cls: 'r' },
+      { key: 'pace', label: 'Tempo', cls: 'r' }, { key: 'avg_hr', label: 'Puls', cls: 'r' }, { key: 'total_ascent_m', label: 'Höhe', cls: 'r' },
+    ];
+
+    const bereit = ref(false);   // erst nach GET /api/me entscheiden, ob Login oder App
+    const user = ref(null);
+    const view = ref('logbuch');
+
+    /* Anmeldung (FA-A2); keine Registrierung, nur Demo-Konten (FA-A1) */
+    const auth = reactive({ email: '', passwort: '', fehler: '', laeuft: false });
+    function demoEintragen() {
+      auth.email = 'demo@pacemaker.ch'; auth.passwort = 'laufen123'; auth.fehler = '';
+    }
+    async function authSenden() {
+      auth.fehler = ''; auth.laeuft = true;
+      try {
+        const u = await api.login(auth.email, auth.passwort);
+        auth.passwort = '';
+        // Nach dem Anmelden immer das Logbuch; nur beim Neuladen der Seite
+        // wird der zuletzt geöffnete Reiter wiederhergestellt.
+        await eingeloggt(u, 'logbuch');
+      } catch (e) {
+        auth.fehler = e.message;
+      } finally { auth.laeuft = false; }
+    }
+    async function abmelden() {
+      await api.logout();
+      user.value = null; Object.assign(tipp, { empfehlung: null, auswahl: null, laedt: false, fehler: '' }); importMeldung.text = '';
+      auth.fehler = '';
+    }
+    async function eingeloggt(u, startView) {
+      user.value = u;
+      await Promise.all([ladeTrainings(), ladeZiele(), ladeFragen()]);
+      let start = startView || 'logbuch';
+      if (!startView) {
+        try { start = localStorage.getItem('pacemaker-tab') || start; } catch (e) {}
+        if (TABS.some(t => t.id === location.hash.slice(1))) start = location.hash.slice(1);
+      }
+      zeige(start);
+    }
+    function zeige(id) {
+      view.value = TABS.some(t => t.id === id) ? id : 'logbuch';
+      try { localStorage.setItem('pacemaker-tab', view.value); } catch (e) {}
+    }
+
+    /* Logbuch */
+    const trainings = ref([]);
+    const sortKey = ref('start_time'), sortDir = ref('desc');
+    const dragOver = ref(false);
+    const csvInput = ref(null);
+    const importMeldung = reactive({ text: '', ok: true });
+    const manuell = reactive({ start: '', titel: '', km: null, zeit: '', hf: null, gespeichert: false, fehler: '' });
+
+    async function ladeTrainings() {
+      trainings.value = (await api.getTrainings(sortKey.value, sortDir.value)).trainings;
+    }
+    // FA-L3: Anzahl Läufe und Gesamtkilometer
+    const logSummary = computed(() => {
+      const km = trainings.value.reduce((s, t) => s + t.distance_km, 0);
+      return `${trainings.value.length} Läufe · ${fmtKm(km)} gesamt · Zeit = Bewegungszeit`;
+    });
+    function sortiere(k) {
+      if (k === sortKey.value) sortDir.value = sortDir.value === 'asc' ? 'desc' : 'asc';
+      else { sortKey.value = k; sortDir.value = k === 'title' ? 'asc' : 'desc'; }
+      ladeTrainings();
+    }
+    async function loesche(id) {
+      try { await api.deleteTraining(id); }
+      catch (e) { importMeldung.text = e.message; importMeldung.ok = false; }
+      await ladeTrainings();
+    }
+    async function importiere(file) {
+      try {
+        const r = await api.importCsv(file);
+        importMeldung.text = `${r.imported} Läufe importiert · ${r.duplicates} Duplikate übersprungen · ${r.not_a_run} andere Aktivitäten übersprungen${r.errors ? ` · ${r.errors} Zeilen fehlerhaft` : ''}`;
+        importMeldung.ok = true;
+        await Promise.all([ladeTrainings(), ladeZiele()]);  // km-Vorschlag ändert sich mit
+      } catch (e) {
+        importMeldung.text = e.message; importMeldung.ok = false;
+      }
+    }
+    function onFile(e) { if (e.target.files[0]) importiere(e.target.files[0]); e.target.value = ''; }
+    function onDrop(e) { dragOver.value = false; const f = e.dataTransfer.files[0]; if (f) importiere(f); }
+    async function laufSpeichern() {
+      manuell.fehler = ''; manuell.gespeichert = false;
+      try {
+        // Die Zeit geht als Text ans Backend; dort wird sie geprüft und umgerechnet (NFA-3).
+        await api.addTraining({
+          start_time: manuell.start, title: manuell.titel.trim(), distance_km: manuell.km,
+          time: manuell.zeit.trim(), avg_hr: manuell.hf || null,
+        });
+      } catch (e) { manuell.fehler = e.message; return; }
+      Object.assign(manuell, { start: '', titel: '', km: null, zeit: '', hf: null, gespeichert: true });
+      await ladeTrainings();
+    }
+
+    /* Rückfragen (FA-Z1 bis FA-Z5) */
+    const rueckfragen = ref([]);
+    const antworten = reactive({});
+    const kmVorschlag = ref(0);
+    const wettkampf = reactive({ name: '', race_date: '', distance_km: 21.0975, target_time: '' });
+    const profilGespeichert = ref(false);
+    const profilFehler = ref('');
+    async function ladeZiele() {
+      const [fragen, ziele] = await Promise.all([api.getRueckfragen(), api.getZiele()]);
+      rueckfragen.value = fragen;
+      for (const k of Object.keys(antworten)) delete antworten[k];
+      Object.assign(antworten, ziele.answers);
+      kmVorschlag.value = ziele.weekly_km_suggestion;
+      const w = ziele.competition;
+      Object.assign(wettkampf, w
+        ? { name: w.name, race_date: w.race_date, distance_km: w.distance_km, target_time: fmtZeit(w.target_time_s) }
+        : { name: '', race_date: '', distance_km: 21.0975, target_time: '' });
+    }
+    async function profilSpeichern() {
+      profilFehler.value = ''; profilGespeichert.value = false;
+      // Leere Zahlenfelder liefert v-model als '' – fürs Backend heisst das "keine Antwort".
+      const answers = Object.fromEntries(Object.entries(antworten).map(([k, v]) => [k, v === '' ? null : v]));
+      const competition = antworten.goal === 'competition'
+        ? { name: wettkampf.name.trim(), race_date: wettkampf.race_date, distance_km: wettkampf.distance_km, target_time: wettkampf.target_time.trim() }
+        : null;
+      try { await api.putZiele(answers, competition); }
+      catch (e) { profilFehler.value = e.message; return; }
+      profilGespeichert.value = true; setTimeout(() => profilGespeichert.value = false, 2500);
+    }
+
+    /* KI-Tipps (FA-E1 bis FA-E7) */
+    const fragen = ref([]);
+    // auswahl: Id der gewählten Frage; laedt: Anfrage läuft; empfehlung: die letzte (FA-E6)
+    const tipp = reactive({ empfehlung: null, auswahl: null, laedt: false, fehler: '' });
+    async function ladeFragen() {
+      const [f, empfehlung] = await Promise.all([api.getFragen(), api.getEmpfehlung()]);
+      fragen.value = f;
+      tipp.empfehlung = empfehlung;
+      // Die Frage der letzten Empfehlung vorwählen. Gespeichert ist nur ihr Text.
+      tipp.auswahl = f.find(q => q.text === empfehlung?.question)?.id ?? null;
+    }
+    // FA-E1: Nur dieser Knopf ruft das Sprachmodell auf, nicht das Antippen einer Frage.
+    async function antwortErzeugen() {
+      Object.assign(tipp, { laedt: true, fehler: '' });
+      // FA-E5: Bei einem Fehler bleibt die bisherige Empfehlung stehen.
+      try { tipp.empfehlung = await api.askCoach(tipp.auswahl); }
+      catch (e) { tipp.fehler = e.message; }
+      finally { tipp.laedt = false; }
+    }
+
+    /* Start: bestehende Sitzung übernehmen, GET /api/auth/me mit dem Session-Cookie (FA-A4) */
+    onMounted(async () => {
+      try { await eingeloggt(await api.me()); } catch (e) { /* 401: Login zeigen */ }
+      bereit.value = true;
+    });
+
+    return {
+      TABS, SPALTEN, bereit, user, view, zeige,
+      auth, demoEintragen, authSenden, abmelden,
+      trainings, sortKey, sortDir, sortiere, loesche, dragOver, csvInput, importMeldung, onFile, onDrop, logSummary, manuell, laufSpeichern,
+      rueckfragen, antworten, kmVorschlag, wettkampf, profilGespeichert, profilFehler, profilSpeichern,
+      fragen, tipp, antwortErzeugen,
+      fmtDatum, fmtUhr, fmtKm, fmtZeit, fmtPace,
+    };
+  },
+}).mount('#app');
+</script>
+</body>
 </html>
